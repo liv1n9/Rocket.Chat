@@ -10,6 +10,7 @@ import { isTheLastMessage, msgStream } from '../../lib/server';
 import { canAccessRoom, hasPermission } from '../../authorization/server';
 import { api } from '../../../server/sdk/api';
 import { AppEvents, Apps } from '../../apps/server/orchestrator';
+import { normalizeMessagesForUser } from '../../utils/server/lib/normalizeMessagesForUser';
 
 const removeUserReaction = (message, reaction, username) => {
 	message.reactions[reaction].usernames.splice(message.reactions[reaction].usernames.indexOf(username), 1);
@@ -72,6 +73,7 @@ async function setReaction(room, user, message, reaction, shouldReact) {
 			}
 		}
 		callbacks.run('unsetReaction', message._id, reaction);
+		message = normalizeMessagesForUser([message], user._id)[0];
 		callbacks.run('afterUnsetReaction', message, { user, reaction, shouldReact, oldMessage });
 
 		isReacted = false;
@@ -90,10 +92,7 @@ async function setReaction(room, user, message, reaction, shouldReact) {
 			Rooms.setReactionsInLastMessage(room._id, message);
 		}
 		callbacks.run('setReaction', message._id, reaction);
-		if (!message.reactions[reaction].names) {
-			message.reactions[reaction].names = [];
-		}
-		message.reactions[reaction].names.push(user.name);
+		message = normalizeMessagesForUser([message], user._id)[0];
 		callbacks.run('afterSetReaction', message, { user, reaction, shouldReact });
 
 		isReacted = true;
